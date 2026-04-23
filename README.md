@@ -1,7 +1,5 @@
 # MyceliumOS v0.1.5-stable
 
-> Um sistema operacional x86 de 32 bits minimalista focado em modularidade, aprendizado e a beleza do micélio digital.
-
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
