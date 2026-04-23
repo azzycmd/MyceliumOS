@@ -1,0 +1,26 @@
+# Arquivos de Saída do Compilador (Objetos)
+*.o
+*.obj
+
+# Imagens de Disco e Binários Finais
+*.img
+*.bin
+*.iso
+*.iso.bin
+
+# Arquivos de Depuração e Logs
+*.log
+*.map
+*.sym
+
+# Arquivos Temporários de Editores (Ex: VS Code, Vim)
+.vscode/
+.idea/
+*.swp
+*~
+
+# Arquivos de sistema do SO hospedeiro
+.DS_Store
+Thumbs.db
+
+.directory
