@@ -96,14 +96,12 @@ void teclado() {
     if (scancode == 0x0E) { // Backspace
         if (buffer_index > 0) {
             buffer_index--;
-            char char_apagado = buffer[buffer_index]; // Vê o que estamos apagando
+            char char_apagado = buffer[buffer_index];
             buffer[buffer_index] = '\0';
 
             if (char_apagado == '\t') {
-                // Se era um TAB, apaga 4 espaços na tela
                 print("\b\b\b\b");
             } else {
-                // Se era uma letra normal, apaga só 1
                 print("\b");
             }
         }

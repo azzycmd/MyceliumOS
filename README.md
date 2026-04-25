@@ -14,7 +14,13 @@
 
 ## Funcionalidades Novas (v0.2.0)
 
+  - Real Time Clock (RTC) - Relogio em tempo real (data + tempo)
   
+  - Tab agora eh deletado com um so delete!
+
+  - Scroll automatico - Espaco infinito
+
+  - Novo driver VGA - Muda nada na sua vida :)
 
 ## Comandos Disponíveis
 
@@ -32,9 +38,13 @@
 
   reboot: Reinicia o sistema via Triple Fault.
 
+  cpuinfo: Mostra fabricante e nome da CPU
+
+  rtc: Mostra o tempo real
+
 ## Como Executar
 
-  Execute o arquivo "Makefile". Para compilar, use "make". Para rodar, use "make run".
+  Execute o arquivo "Makefile". Para compilar, use "make". Para rodar, use "make run". Para limpar, "make clean"
 
 Autor: [azzycmd]
 Licença: MIT
