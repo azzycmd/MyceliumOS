@@ -2,12 +2,11 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* O Kernel começa no endereço 0x1000 */
-    . = 0x1000;
+    . = 1M; /* O GRUB carrega o kernel aqui */
 
     .text : ALIGN(4K)
     {
-        kernel_entry.o(.text)
+        *(.multiboot) /* Garante que o header do boot.asm fique no início */
         *(.text)
     }
 

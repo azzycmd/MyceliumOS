@@ -1,0 +1,102 @@
+[
+  {
+    "file": "src/cmd.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-ffreestanding",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-c",
+      "src/cmd.c",
+      "-o",
+      "src/cmd.o"
+    ],
+    "directory": "/home/asriel/MyceliumOS",
+    "output": "src/cmd.o"
+  },
+  {
+    "file": "src/io.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-ffreestanding",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-c",
+      "src/io.c",
+      "-o",
+      "src/io.o"
+    ],
+    "directory": "/home/asriel/MyceliumOS",
+    "output": "src/io.o"
+  },
+  {
+    "file": "src/kbd.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-ffreestanding",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-c",
+      "src/kbd.c",
+      "-o",
+      "src/kbd.o"
+    ],
+    "directory": "/home/asriel/MyceliumOS",
+    "output": "src/kbd.o"
+  },
+  {
+    "file": "src/kernel.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-ffreestanding",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-c",
+      "src/kernel.c",
+      "-o",
+      "src/kernel.o"
+    ],
+    "directory": "/home/asriel/MyceliumOS",
+    "output": "src/kernel.o"
+  },
+  {
+    "file": "src/lib.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-ffreestanding",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Iinclude",
+      "-fno-stack-protector",
+      "-fno-pie",
+      "-c",
+      "src/lib.c",
+      "-o",
+      "src/lib.o"
+    ],
+    "directory": "/home/asriel/MyceliumOS",
+    "output": "src/lib.o"
+  }
+]
