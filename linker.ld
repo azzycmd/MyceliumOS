@@ -2,11 +2,11 @@ ENTRY(_start)
 
 SECTIONS
 {
-    . = 1M; /* O GRUB carrega o kernel aqui */
+    . = 1M; /* Endereço padrão para kernels Multiboot */
 
     .text : ALIGN(4K)
     {
-        *(.multiboot) /* Garante que o header do boot.asm fique no início */
+        *(.multiboot) /* Garante que o cabeçalho do boot.asm seja o PRIMEIRO */
         *(.text)
     }
 

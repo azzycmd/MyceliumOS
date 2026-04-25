@@ -1,5 +1,6 @@
 #ifndef CMD_H
 #define CMD_H
+#include <stdint.h>
 
 typedef struct {
     char* nome;
@@ -29,5 +30,6 @@ void cmd_fetch(char* args);
 void cmd_color(char* args);
 void cmd_uptime(char* args);
 void pcmd(char* input);
+void cpuid(uint32_t code, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx);
 
 #endif

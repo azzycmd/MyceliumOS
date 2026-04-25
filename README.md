@@ -1,28 +1,20 @@
-# MyceliumOS v0.1.5-stable
+# MyceliumOS Amanita (v0.2.0)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
     `. \ ~-.  oOOo.      Arch: i386 (32-bit)
-      `.; / ~.  OO:      Version: 0.1.5-stable
+      `.; / ~.  OO:      Versao: Amanita (v0.2.0)
        .'  ;-- `.o.'
      ,'  ; ~~--'~
      ;  ;
  _\\;_\\//_________
 ```
 
-## Funcionalidades Atuais (v0.1.5)
+## Funcionalidades Novas (v0.2.0)
 
-  Interpretador de Comandos (Shell): Suporte a comandos dinâmicos e expansão de variáveis com prefixo $.
-
-  Gestão de Terminal: Scrolling automático por hardware/memória e controle de cursor.
-
-  Teclado: Driver completo com suporte a SHIFT e caracteres especiais.
-
-  Gráficos de Texto: Sistema de cores VGA e interface baseada em caracteres.
-
-  Timer & Som: Controle de PIT (Programmable Interval Timer) e beep via PC Speaker.
+  
 
 ## Comandos Disponíveis
 
@@ -42,20 +34,7 @@
 
 ## Como Executar
 
-Para compilar e testar o MyceliumOS, você precisará de um ambiente Unix (Linux/WSL) com gcc (i386-elf), nasm e o emulador QEMU.
-
-  Compilação:
-  Bash
-
-  # Use seu script de build ou Makefile
-    nasm -f elf32 boot.s -o boot.o
-    gcc -m32 -c kernel.c -o kernel.o -ffreestanding -O2 -Wall -Wextra
-    ld -m elf_i386 -T linker.ld boot.o kernel.o -o mycelium.bin
-
-  Execução no QEMU:
-  Bash
-
-    qemu-system-i386 -drive format=raw,file=mycelium-0.1.5-stable.img
+  Execute o arquivo "Makefile". Para compilar, use "make". Para rodar, use "make run".
 
 Autor: [azzycmd]
 Licença: MIT

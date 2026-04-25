@@ -3,28 +3,12 @@
 #include <stdint.h>
 #include "lib.h"
 #include "cmd.h"
-
-#define video_memory ((char *)0xb8000)
-#define print_error(msg) setcolor = vermelho; print(msg); cor(coragr);
-#define print_info(msg) setcolor = azul; print(msg); cor(coragr);
-
+#include "vga.h"
 
 struct idt_entry_struct idt[256] = { [0 ... 255] = {0, 0, 0, 0, 0} };
 struct idt_ptr_struct idtp = {0, 0};
 
-char versao[] = "alpha-0.2.0";
-
-char verde = 0x0A;
-char azul = 0x0B;
-char vermelho = 0x0C;
-char rosa = 0x0D;
-char amarelo = 0x0E;
-char branco = 0x0F;
-char setcolor = 0x0F;
-int cursorpos = 0;
-char coragr = 0x0F;
 unsigned int timer_ticks = 0;
-char cursorstr[5] = "";
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].base_lo = base & 0xFFFF;
@@ -39,84 +23,6 @@ void idt_install() {
     idtp.base = (uint32_t)(unsigned long)&idt; 
     for(int i = 0; i < 256; i++) idt_set_gate(i, 0, 0, 0);
     __asm__ volatile("lidt (%0)" : : "r"(&idtp));
-}
-
-void scroll() {
-    if (cursorpos >= 80 * 25 * 2) {
-        for (int i = 0; i < 80 * 24 * 2; i++) {
-            video_memory[i] = video_memory[i + 80 * 2];
-        }
-
-        for (int i = 80 * 24 * 2; i < 80 * 25 * 2; i += 2) {
-            video_memory[i] = ' ';
-            video_memory[i + 1] = setcolor;
-        }
-
-        cursorpos = 80 * 24 * 2;
-    }
-}
-
-void cursor() {
-    unsigned short pos = (unsigned short)(cursorpos / 2);
-
-    outb(0x3D4, 0x0F);
-    // Cast explícito para uint8_t para silenciar o compilador
-    outb(0x3D5, (uint8_t)(pos & 0xFF));
-    
-    outb(0x3D4, 0x0E);
-    // Desloca 8 bits para a direita para pegar a parte alta
-    outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
-}
-
-void limpatela() {
-    for (int i = 0; i < 80 * 25 * 2; i += 2) {
-        video_memory[i] = ' ';
-        video_memory[i+1] = setcolor;
-    }
-    cursorpos = 0;
-    cursor();
-}
-
-void cor(char cor) {
-    setcolor = cor;
-    coragr = cor;
-}
-
-void print(char* msg) {
-    for (int i = 0; msg[i] != '\0'; i++) {
-        if (msg[i] == '\n') {
-            cursorpos = ((cursorpos / 160) + 1) * 160;
-            if (cursorpos >= 160 * 25) scroll(); // Scroll IMEDIATO no newline
-        }
-        else if (msg[i] == '\b') {
-            if (cursorpos > 0) {
-                cursorpos -= 2;
-                video_memory[cursorpos] = ' ';
-                video_memory[cursorpos + 1] = setcolor;
-            }
-        }
-        else if (msg[i] == '\t') {
-            for (int j = 0; j < 4; j++) {
-                video_memory[cursorpos] = ' ';
-                video_memory[cursorpos + 1] = setcolor;
-                cursorpos += 2;
-            }
-        }
-        else {
-            video_memory[cursorpos] = msg[i];
-            video_memory[cursorpos + 1] = setcolor;
-            cursorpos += 2;
-        }
-        
-        if (cursorpos >= 160 * 25) scroll();
-        if (cursorpos < 0) scroll();
-
-        if (cursorpos >= 4000) {
-            scroll();
-            cursorpos = 160 * 24; // Garante que o cursor volte para a última linha
-        }
-    }
-    cursor();
 }
 
 void cpit(unsigned int frequencia) {
@@ -196,7 +102,7 @@ int main() {
     
     limpatela();
     cursorpos = 0;
-    cor(branco);
+    cor(BRANCO);
     print("MyceliumOS Terminal ");
     print(versao);
     cmd_fetch(0);

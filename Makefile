@@ -61,6 +61,8 @@ clean:
 	@rm -rf $(OBJDIR) $(BINDIR)
 
 # Atalho para rodar no QEMU (se você tiver instalado)
-run: all
+run:
+	make clean 
+	make
 	qemu-system-i386 -kernel $(KERNEL) -audiodev pa,id=pa0 -machine pcspk-audiodev=pa0
 .PHONY: all setup clean run

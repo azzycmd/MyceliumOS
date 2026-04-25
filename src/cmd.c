@@ -2,10 +2,7 @@
 #include "kernel.h"
 #include "lib.h"
 #include "io.h"
-#include "kbd.h"
-
-#define print_error(msg) setcolor = vermelho; print(msg); cor(coragr);
-#define print_info(msg) setcolor = azul; print(msg); cor(coragr);
+#include "vga.h"
 
 void cmd_ajuda(char* args) {
     (void)args;
@@ -17,6 +14,39 @@ void cmd_ajuda(char* args) {
         print(lista_comandos[i].name);
         if (i != num_comandos - 1) print(", ");
     }
+}
+
+void cmd_time(char* args) {
+    (void)args;
+    while (cmos(0x0A) & 0x80);
+
+    unsigned char segundo = bcdtodecimal(cmos(0x00));
+    unsigned char minuto  = bcdtodecimal(cmos(0x02));
+    unsigned char hora    = bcdtodecimal(cmos(0x04));
+    unsigned char dia     = bcdtodecimal(cmos(0x07));
+    unsigned char mes     = bcdtodecimal(cmos(0x08));
+    unsigned char ano     = bcdtodecimal(cmos(0x09));
+
+    int hora_local = (int)hora - 3;
+    if (hora_local < 0) hora_local += 24;
+
+    char buffer_tempo[32];
+    print("\n");
+    
+    itoa(dia, buffer_tempo); print_info(buffer_tempo); print_info("/");
+    itoa(mes, buffer_tempo); print_info(buffer_tempo); print_info("/20");
+    itoa(ano, buffer_tempo); print_info(buffer_tempo);
+    
+    print_info(" - ");
+
+    itoa(hora_local, buffer_tempo); print_info(buffer_tempo); print_info(":");
+    itoa(minuto, buffer_tempo);
+    if (minuto < 10) {print_info("0");}
+    print_info(buffer_tempo); 
+    print_info(":");
+    itoa(segundo, buffer_tempo);
+    if (segundo < 10) {print_info("0");}
+    print_info(buffer_tempo);
 }
 
 void cmd_beep(char* args) {
@@ -83,29 +113,56 @@ void cmd_echo(char* args) {
     }
 }
 
+void cpuid(uint32_t code, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
+    __asm__ volatile (
+        "cpuid"                  // Chama a instrução CPUID
+        : "=a"(*eax),            // Saída: registrador EAX vai para a variável eax
+          "=b"(*ebx),            // Saída: registrador EBX vai para a variável ebx
+          "=c"(*ecx),            // Saída: registrador ECX vai para a variável ecx
+          "=d"(*edx)             // Saída: registrador EDX vai para a variável edx
+        : "a"(code)              // Entrada: coloca o 'code' no registrador EAX
+    );
+}
+
 void cmd_cpu(char* args) {
     (void)args;
-    unsigned int ebx, ecx, edx;
+    uint32_t eax, ebx, ecx, edx;
+    cpuid(0, &eax, &ebx, &ecx, &edx);
+
     char vendor[13];
-    __asm__ volatile("cpuid" : "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0));
-    *((int*)(vendor)) = ebx;
-    *((int*)(vendor + 4)) = edx;
-    *((int*)(vendor + 8)) = ecx;
-    vendor[12] = '\0'; 
-    print("\nFabricante da CPU: ");
-    print(vendor);
+    ((uint32_t*)vendor)[0] = ebx;
+    ((uint32_t*)vendor)[1] = edx;
+    ((uint32_t*)vendor)[2] = ecx;
+    vendor[12] = '\0';
+
+    print("\nFabricante: ");
+    print_info(vendor);
+
+    print("\nNome: ");
+    cpufetch(0);
 }
 
 void cpufetch(char* args) {
     (void)args;
-    unsigned int ebx, ecx, edx;
-    char vendor[13];
-    __asm__ volatile("cpuid" : "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0));
-    *((int*)(vendor)) = ebx;
-    *((int*)(vendor + 4)) = edx;
-    *((int*)(vendor + 8)) = ecx;
-    vendor[12] = '\0'; 
-    print_info(vendor);
+    uint32_t regs[4]; // Array para EAX, EBX, ECX, EDX
+    char brand[49];   // Buffer para os 48 caracteres + finalizador \0
+
+    for (int i = 0; i < 3; i++) {
+        // Chamamos 0x80000002, depois 0x80000003, depois 0x80000004
+        cpuid(0x80000002 + i, &regs[0], &regs[1], &regs[2], &regs[3]);
+        
+        // Copiamos os 16 bytes deste lote para o buffer
+        // O cast para (uint32_t*) faz a mágica de copiar 4 bytes por vez
+        ((uint32_t*)brand)[i * 4 + 0] = regs[0];
+        ((uint32_t*)brand)[i * 4 + 1] = regs[1];
+        ((uint32_t*)brand)[i * 4 + 2] = regs[2];
+        ((uint32_t*)brand)[i * 4 + 3] = regs[3];
+    }
+    
+    brand[48] = '\0';
+    
+    // Agora é só imprimir!
+    print_info(brand);
 }
 
 void cmd_oi(char* args) {
@@ -135,45 +192,36 @@ void cmd_reboot(char* args) {
 void cmd_fetch(char* args) {
     (void)args;
     int t = setcolor;
-    char q = vermelho;
-    char w = q;
-    cor(q);
+    
+    cor(VERMELHO);
     print("\n     .-'~~~-.           ");
     print_error("MyceliumOS ");
-    print_error(versao);
+    print_info(codename);
+    print_info(" (")
+    print_info(versao);
+    print_info(")")
     print("\n   .'");
-    cor(w);
     print("o  oOOOo");
-    cor(q);
     print(".`         ");
     print_error("---------\n");
     print("  :~~~-.");
-    cor(w);
     print("oOo   o");
-    cor(q);
     print(".  `     ");
     print_error("CPU: ");
     cpufetch(0);
     print("\n   `. \\ ~-.  ");
-    cor(w);
     print("oOOo");
-    cor(q);
     print(".      ");
     print_error("Kernel: ");
     print_info("Mycelium-x86\n");
     print("     `.; / ~.  ");
-    cor(w);
     print("OO");
-    cor(q);
     print(":\n");
     print("      .'  ;-- `.");
-    cor(w);
     print("o");
-    cor(q);
     print(".'\n");
     print("    ,'  ; ~~--'~\n");
     print("    ;  ;\n");
-    cor(q);
     print("_\\\\;_\\\\//_________\n");
     cor(t);
 }
@@ -233,7 +281,8 @@ cmd lista_comandos[] = {
     {"fetch", cmd_fetch},
     {"color", cmd_color},
     {"uptime", cmd_uptime},
-    {"echo", cmd_echo}
+    {"echo", cmd_echo},
+    {"rtc", cmd_time}
 };
 
 int num_comandos = sizeof(lista_comandos) / sizeof(cmd);
@@ -288,7 +337,8 @@ void pcmd(char* input) {
 sys_var lista_vars[] = {
     {"ver", versao},
     {"os", "MyceliumOS"},
-    {"cursor", cursorstr}
+    {"cursor", cursorstr},
+    {"name", codename},
 };
 
 int num_vars = sizeof(lista_vars) / sizeof(sys_var);

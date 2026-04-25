@@ -1,5 +1,9 @@
 #include "lib.h"
 
+char cursorstr[5] = "";
+char versao[] = "v0.2.0";
+char codename[] = "Amanita";
+
 int strdif(char* s1, char* s2) {
     int i = 0;
     while (s1[i] == s2[i]) {

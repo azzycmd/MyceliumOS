@@ -1,8 +1,8 @@
 #include "kbd.h"
 #include <stdint.h>
 #include "io.h"
-#include "kernel.h"
 #include "cmd.h"
+#include "vga.h"
 
 int shifton = 0;
 char buffer[256];
@@ -82,8 +82,6 @@ void teclado() {
     if (scancode & 0x80) return;
 
     if (scancode == 0x1C) { 
-    // 1. O primeiro \n pula a linha onde você acabou de digitar
-    
     buffer[buffer_index] = '\0';
     
     if (buffer_index > 0) {
@@ -95,11 +93,19 @@ void teclado() {
     buffer_index = 0;
     return;
     }
-    if (scancode == 0x0E) {
+    if (scancode == 0x0E) { // Backspace
         if (buffer_index > 0) {
-        buffer_index--;
-        buffer[buffer_index] = '\0';
-        print("\b");
+            buffer_index--;
+            char char_apagado = buffer[buffer_index]; // Vê o que estamos apagando
+            buffer[buffer_index] = '\0';
+
+            if (char_apagado == '\t') {
+                // Se era um TAB, apaga 4 espaços na tela
+                print("\b\b\b\b");
+            } else {
+                // Se era uma letra normal, apaga só 1
+                print("\b");
+            }
         }
         return;
     }
