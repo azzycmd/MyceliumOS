@@ -3,6 +3,7 @@
 #include "io.h"
 #include "cmd.h"
 #include "vga.h"
+#include "lib.h"
 
 int shifton = 0;
 char buffer[256];
@@ -66,6 +67,7 @@ unsigned char keyboard_map_shift[128] =
 void teclado() {
     uint8_t scancode = inb(0x60);
     outb(0x20, 0x20); // EOI imediato
+    __asm__ volatile("sti");
 
     // Lógica de Shift (Scancodes: 0x2A = Left Shift, 0x36 = Right Shift)
     if (scancode == 0x2A || scancode == 0x36) {
@@ -87,7 +89,7 @@ void teclado() {
     if (buffer_index > 0) {
         pcmd(buffer); 
     } else {
-        print("\nMyceliumOS> ");
+        prompt();
     }
     
     buffer_index = 0;

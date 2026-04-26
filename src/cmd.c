@@ -4,6 +4,10 @@
 #include "io.h"
 #include "vga.h"
 
+extern char smod[];
+
+void attvar(char* nome_var, char* novo_valor);
+
 void cmd_ajuda(char* args) {
     (void)args;
     extern int num_comandos;
@@ -18,40 +22,19 @@ void cmd_ajuda(char* args) {
 
 void cmd_time(char* args) {
     (void)args;
-    while (cmos(0x0A) & 0x80);
-
-    unsigned char segundo = bcdtodecimal(cmos(0x00));
-    unsigned char minuto  = bcdtodecimal(cmos(0x02));
-    unsigned char hora    = bcdtodecimal(cmos(0x04));
-    unsigned char dia     = bcdtodecimal(cmos(0x07));
-    unsigned char mes     = bcdtodecimal(cmos(0x08));
-    unsigned char ano     = bcdtodecimal(cmos(0x09));
-
-    int hora_local = (int)hora - 3;
-    if (hora_local < 0) hora_local += 24;
-
-    char buffer_tempo[32];
+    char s = setcolor;
+    cor(CIANO);
+    updatertc();
+    datat();
+    print(" - ");
+    horat();
     print("\n");
-    
-    itoa(dia, buffer_tempo); print_info(buffer_tempo); print_info("/");
-    itoa(mes, buffer_tempo); print_info(buffer_tempo); print_info("/20");
-    itoa(ano, buffer_tempo); print_info(buffer_tempo);
-    
-    print_info(" - ");
-
-    itoa(hora_local, buffer_tempo); print_info(buffer_tempo); print_info(":");
-    itoa(minuto, buffer_tempo);
-    if (minuto < 10) {print_info("0");}
-    print_info(buffer_tempo); 
-    print_info(":");
-    itoa(segundo, buffer_tempo);
-    if (segundo < 10) {print_info("0");}
-    print_info(buffer_tempo);
+    cor(s);
 }
 
 void cmd_beep(char* args) {
     if (args == 0) {
-        som(750); // Frequência padrão
+        som(750);
     } else {
         int freq = atoi(args);
         if (freq > 20 && freq < 20000) {
@@ -95,7 +78,7 @@ void cmd_echo(char* args) {
                     while(lista_vars[j].nome[len] != '\0') len++;
 
                     if (strdifb(var_ptr, lista_vars[j].nome, len) == 0) {
-                        print_info(lista_vars[j].valor_estatico);
+                        print_info(lista_vars[j].valor_referencia);
                         i += len;
                         achou = 1;
                         break;
@@ -103,24 +86,27 @@ void cmd_echo(char* args) {
                 }
             }
 
-            if (!achou) print("$");
+            if (!achou) {
+                char s[2] = {'$', '\0'};
+                print(s);
+            }
         } 
         else {
             char s[2] = {0, 0};
             s[0] = args[i];
-            print(s); // Bem mais leve
+            print(s);
         }
     }
 }
 
 void cpuid(uint32_t code, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx) {
     __asm__ volatile (
-        "cpuid"                  // Chama a instrução CPUID
-        : "=a"(*eax),            // Saída: registrador EAX vai para a variável eax
-          "=b"(*ebx),            // Saída: registrador EBX vai para a variável ebx
-          "=c"(*ecx),            // Saída: registrador ECX vai para a variável ecx
-          "=d"(*edx)             // Saída: registrador EDX vai para a variável edx
-        : "a"(code)              // Entrada: coloca o 'code' no registrador EAX
+        "cpuid"
+        : "=a"(*eax),
+          "=b"(*ebx),
+          "=c"(*ecx),
+          "=d"(*edx)
+        : "a"(code)
     );
 }
 
@@ -144,15 +130,12 @@ void cmd_cpu(char* args) {
 
 void cpufetch(char* args) {
     (void)args;
-    uint32_t regs[4]; // Array para EAX, EBX, ECX, EDX
-    char brand[49];   // Buffer para os 48 caracteres + finalizador \0
+    uint32_t regs[4];
+    char brand[49];
 
     for (int i = 0; i < 3; i++) {
-        // Chamamos 0x80000002, depois 0x80000003, depois 0x80000004
         cpuid(0x80000002 + i, &regs[0], &regs[1], &regs[2], &regs[3]);
         
-        // Copiamos os 16 bytes deste lote para o buffer
-        // O cast para (uint32_t*) faz a mágica de copiar 4 bytes por vez
         ((uint32_t*)brand)[i * 4 + 0] = regs[0];
         ((uint32_t*)brand)[i * 4 + 1] = regs[1];
         ((uint32_t*)brand)[i * 4 + 2] = regs[2];
@@ -160,8 +143,6 @@ void cpufetch(char* args) {
     }
     
     brand[48] = '\0';
-    
-    // Agora é só imprimir!
     print_info(brand);
 }
 
@@ -176,10 +157,10 @@ void cmd_limpar(char* args) {
     cursorpos = 0;
 }
 
-
 void cmd_reboot(char* args) {
     (void)args;
-    print("\nReiniciando sistema...");
+    print_info("\nReiniciando sistema...");
+    sleep(100);
     
     uint8_t temp;
     do {
@@ -187,6 +168,58 @@ void cmd_reboot(char* args) {
     } while (temp & 0x02);
     
     outb(0x64, 0xFE);
+}
+
+void attvar(char* nome_var, char* novo_valor) {
+    extern int num_vars;
+    extern sys_var lista_vars[];
+
+    for (int i = 0; i < num_vars; i++) {
+        if (strdif(nome_var, lista_vars[i].nome) == 0) {
+            int j = 0;
+            while (novo_valor[j] != '\0' && j < 127) {
+                lista_vars[i].valor_referencia[j] = novo_valor[j];
+                j++;
+            }
+            lista_vars[i].valor_referencia[j] = '\0';
+            return;
+        }
+    }
+}
+
+void cmd_set(char* args) {    
+    if (args == 0 || args[0] == '\0') {
+        print_error("\nUso: set <nome> <valor>");
+        return;
+    }
+
+    char nome[32];
+    char valor[128];
+    int i = 0, k = 0;
+
+    while (args[i] != ' ' && args[i] != '\0' && i < 31) {
+        nome[i] = args[i];
+        i++;
+    }
+    nome[i] = '\0';
+
+    if (args[i] == ' ') {
+        i++;
+        while (args[i] != '\0' && k < 127) {
+            valor[k++] = args[i++];
+        }
+    }
+    valor[k] = '\0';
+
+    attvar(nome, valor);
+
+    if (strdif(smod, "1") == 0) {
+        limpatela();
+        cor(VERDE);
+        print("MyceliumOS Terminal ");
+        print(versao);
+        cmd_fetch(0);
+    }
 }
 
 void cmd_fetch(char* args) {
@@ -197,9 +230,9 @@ void cmd_fetch(char* args) {
     print("\n     .-'~~~-.           ");
     print_error("MyceliumOS ");
     print_info(codename);
-    print_info(" (")
+    print_info(" (");
     print_info(versao);
-    print_info(")")
+    print_info(")");
     print("\n   .'");
     print("o  oOOOo");
     print(".`         ");
@@ -216,8 +249,10 @@ void cmd_fetch(char* args) {
     print_info("Mycelium-x86\n");
     print("     `.; / ~.  ");
     print("OO");
-    print(":\n");
-    print("      .'  ;-- `.");
+    print(":      ");
+    print_error("Data/Hora: ");
+    cmd_time(0);
+    print("\n      .'  ;-- `.");
     print("o");
     print(".'\n");
     print("    ,'  ; ~~--'~\n");
@@ -282,6 +317,7 @@ cmd lista_comandos[] = {
     {"color", cmd_color},
     {"uptime", cmd_uptime},
     {"echo", cmd_echo},
+    {"set", cmd_set},
     {"rtc", cmd_time}
 };
 
@@ -291,21 +327,19 @@ void pcmd(char* input) {
     if (input[0] == '\0') return;
 
     char cmd_part[32];
-    char args_temp[256]; // Buffer local para argumentos
+    char args_temp[256];
     char* args_ptr = 0;
     int i = 0;
 
-    // 1. Extrai o comando
     while (input[i] != ' ' && input[i] != '\0' && i < 31) {
         cmd_part[i] = input[i];
         i++;
     }
     cmd_part[i] = '\0';
-    mtom(cmd_part); // Transforma em minúsculo
+    mtom(cmd_part);
 
-    // 2. Extrai os argumentos com segurança
     if (input[i] == ' ') {
-        i++; // Pula o espaço
+        i++;
         int k = 0;
         while (input[i] != '\0' && k < 255) {
             args_temp[k] = input[i];
@@ -313,32 +347,45 @@ void pcmd(char* input) {
             k++;
         }
         args_temp[k] = '\0';
-        args_ptr = args_temp; // Agora args_ptr aponta para uma string válida
+        args_ptr = args_temp;
     }
 
-    // 3. Busca na lista
     for (int j = 0; j < num_comandos; j++) {
         if (strdif(cmd_part, lista_comandos[j].name) == 0) {
-            // Se o comando não tem argumentos, passamos uma string vazia "" em vez de NULL
             lista_comandos[j].func(args_ptr ? args_ptr : ""); 
             
-            // Limpeza pós-comando
-            if (strdif(cmd_part, "limpar") != 0) print("\nMyceliumOS> ");
-            else print("MyceliumOS> ");
+            if (strdif(cmd_part, "limpar") != 0) {
+                prompt();
+            } else {
+                print("[");
+                updatertc();
+                horat();
+                print("] MyceliumOS> ");
+            }
             
             return;
         }
     }
 
     print_error("\nComando nao encontrado.");
-    print("\nMyceliumOS> ");
+    prompt();
 }
 
-sys_var lista_vars[] = {
-    {"ver", versao},
-    {"os", "MyceliumOS"},
-    {"cursor", cursorstr},
-    {"name", codename},
-};
+sys_var lista_vars[10];
+int num_vars = 0;
 
-int num_vars = sizeof(lista_vars) / sizeof(sys_var);
+void registrar_var(char* nome, char* valor_inicial) {
+    if (num_vars >= 10) return;
+    lista_vars[num_vars].nome = nome;
+    lista_vars[num_vars].valor_referencia = valor_inicial;
+    num_vars++;
+}
+
+void init_vars() {
+    num_vars = 0;
+    registrar_var("ver", versao);
+    registrar_var("name", codename);
+    registrar_var("cx", cursor_x_str);
+    registrar_var("cy", cursor_y_str);
+    registrar_var("smod", smod);
+}

@@ -10,6 +10,8 @@ extern int cursorpos;
 extern char coragr;
 extern int cursor_x;
 extern int cursor_y;
+extern char cursor_x_str[10];
+extern char cursor_y_str[10];
 
 enum vga_color {
     PRETO = 0,
@@ -36,5 +38,6 @@ void cursor();
 void limpatela();
 void cursor_on();
 void cor(enum vga_color cor);
+void cursor_on();
 
 #endif

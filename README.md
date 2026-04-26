@@ -1,32 +1,32 @@
-# MyceliumOS Amanita (v0.2.0)
+# MyceliumOS Amanita (v0.2.1)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
-    `. \ ~-.  oOOo.      Arch: i386 (32-bit)
-      `.; / ~.  OO:      Versao: Amanita (v0.2.0)
+    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.1)
+      `.; / ~.  OO:      
        .'  ;-- `.o.'
      ,'  ; ~~--'~
      ;  ;
  _\\;_\\//_________
 ```
 
-## Funcionalidades Novas (v0.2.0)
+## Funcionalidades Novas (v0.2.1)
 
-  - Real Time Clock (RTC) - Relogio em tempo real (data + tempo)
-  
-  - Tab agora eh deletado com um so delete!
+  - Set - Comando que muda algumas variaveis
 
-  - Scroll automatico - Espaco infinito
+  - Separacao do som, time (idt) e main - O som foi pro som.c e som.h, o time foi pro lib.c e lib.h e o main ficou la.
 
-  - Novo driver VGA - Muda nada na sua vida :)
+  - Smod - Preparacao do terreno pra smod (super mode). Ativado com "set smod 1".
+
+  - Correcao do sleep - Mudar o idt de lugar + umas correcoes com o sti consequentemente deixou o sleep podendo ser ativado em comandos, ent correcao no reboot
 
 ## Comandos Disponíveis
 
   ajuda: Lista todos os comandos integrados.
 
-  echo: Imprime texto ou variáveis de sistema (ex: echo $ver).
+  echo: Imprime texto ou variáveis de sistema.
 
   uptime: Mostra o tempo de atividade do sistema.
 
@@ -36,11 +36,13 @@
 
   beep: Gera um som em uma frequência específica.
 
-  reboot: Reinicia o sistema via Triple Fault.
+  reboot: Reinicia o sistema via Triple Fault (agora com tempo pra resetar).
 
   cpuinfo: Mostra fabricante e nome da CPU
 
   rtc: Mostra o tempo real
+
+  set: Muda o valor de algumas variaveis
 
 ## Como Executar
 

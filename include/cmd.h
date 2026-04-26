@@ -4,7 +4,7 @@
 
 typedef struct {
     char* nome;
-    char* valor_estatico;
+    char* valor_referencia; // Aponta para a variável original
 } sys_var;
 
 typedef void (*command_func)(char*);
@@ -31,5 +31,8 @@ void cmd_color(char* args);
 void cmd_uptime(char* args);
 void pcmd(char* input);
 void cpuid(uint32_t code, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx);
+void regvar(char* nome, char* valor_inicial);
+void init_vars();
+void attvar(char* nome_var, char* novo_valor);
 
 #endif

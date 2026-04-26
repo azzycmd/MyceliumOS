@@ -1,5 +1,6 @@
 #include "vga.h"
 #include "io.h"
+#include "lib.h"
 #include <stdint.h>
 
 char setcolor = BRANCO;
@@ -7,6 +8,8 @@ int cursorpos = 0;
 char coragr = BRANCO;
 int cursor_x;
 int cursor_y;
+char cursor_x_str[10];
+char cursor_y_str[10];
 
 void print(char* msg) {
     for (int i = 0; msg[i] != '\0'; i++) {
@@ -65,7 +68,6 @@ void scroll() {
     for (int i = 0; i < 80 * 24 * 2; i++) {
         video_memory[i] = video_memory[i + 80 * 2];
     }
-
     for (int i = 80 * 24 * 2; i < 80 * 25 * 2; i += 2) {
         video_memory[i] = ' ';
         video_memory[i + 1] = setcolor;
@@ -74,16 +76,19 @@ void scroll() {
 
 void cursor() {
     uint16_t pos = (cursor_y * 80) + cursor_x;
-
+    
     outb(0x3D4, 0x0F);
     outb(0x3D5, (uint8_t)(pos & 0xFF));
     outb(0x3D4, 0x0E);
     outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
+
+    itoa(cursor_x, cursor_x_str);
+    itoa(cursor_y, cursor_y_str);
 }
 
 void limpatela() {
     for (int i = 0; i < 80 * 25 * 2; i += 2) {
-        video_memory[i] = ' ';
+        video_memory[i] = ' ';itoa(cursor_x, cursor_x_str); 
         video_memory[i+1] = setcolor;
     }
     cursor_x = 0;
@@ -91,7 +96,13 @@ void limpatela() {
     cursor();
 }
 
+void cursor_on() {
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, (inb(0x3D5) & 0xC0) | 0);
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
+}
+
 void cor(enum vga_color cor) {
     setcolor = cor;
-    coragr = cor;
 }
