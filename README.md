@@ -16,11 +16,13 @@
 
   - Muito mais facil de mexer no terminal agr
 
-  - Adicionada navegação por palavras (Ctrl + Setas).
+    - Navegação por palavras (Ctrl + Setas)
 
-  - Sistema de deleção inteligente (Backspace detecta Tabs e Ctrl+Backspace apaga palavras).
+    - Deletamento inteligente
 
-  - Corrigido bug de renderização que "comia" o prompt do sistema.
+    - Historico de comandos (so 1)
+
+    - Ctrl + C (abort) & Ctrl + L (limpar)
 
 ## Comandos Disponíveis
 

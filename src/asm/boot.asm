@@ -60,5 +60,5 @@ gdt_descriptor:
 section .bss
 align 16
 stack_bottom:
-    resb 65536            ; 32 KB de pilha
-stack_top:                ; Rótulo definido NO FINAL da reserva
+    resb 16384 ; 16 KB para a stack
+stack_top:
