@@ -9,5 +9,6 @@ extern unsigned char keyboard_map[128];
 extern unsigned char keyboard_map_shift[128];
 
 void teclado();
+void bufferins(char letra);
 
 #endif

@@ -32,10 +32,11 @@ int main() {
     cor(BRANCO);
     print("MyceliumOS Terminal ");
     print(versao);
-    cmd_fetch(0);
+    cmd_fetch(0, 0);
     prompt();
     buffer_index = 0;
     buffer[0] = '\0';
+
     while(1) {
         __asm__ volatile("hlt");
     }

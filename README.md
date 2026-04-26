@@ -1,10 +1,10 @@
-# MyceliumOS Amanita (v0.2.1)
+# MyceliumOS Amanita (v0.2.2)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
-    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.1)
+    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.2)
       `.; / ~.  OO:      
        .'  ;-- `.o.'
      ,'  ; ~~--'~
@@ -12,15 +12,15 @@
  _\\;_\\//_________
 ```
 
-## Funcionalidades Novas (v0.2.1)
+## Funcionalidades Novas (v0.2.2)
 
-  - Set - Comando que muda algumas variaveis
+  - Muito mais facil de mexer no terminal agr
 
-  - Separacao do som, time (idt) e main - O som foi pro som.c e som.h, o time foi pro lib.c e lib.h e o main ficou la.
+  - Adicionada navegação por palavras (Ctrl + Setas).
 
-  - Smod - Preparacao do terreno pra smod (super mode). Ativado com "set smod 1".
+  - Sistema de deleção inteligente (Backspace detecta Tabs e Ctrl+Backspace apaga palavras).
 
-  - Correcao do sleep - Mudar o idt de lugar + umas correcoes com o sti consequentemente deixou o sleep podendo ser ativado em comandos, ent correcao no reboot
+  - Corrigido bug de renderização que "comia" o prompt do sistema.
 
 ## Comandos Disponíveis
 

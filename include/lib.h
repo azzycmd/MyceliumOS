@@ -30,6 +30,9 @@ extern unsigned char mes;
 extern unsigned char ano;
 extern char buffer_tempo[32];
 
+extern int prompt_y; 
+extern int prompt_x_inicio;
+
 void updatertc();
 void horat();
 void datat();
@@ -60,5 +63,8 @@ void mtom(char* s);
 void itoa(int n, char* str);
 int atoi(char* str);
 void prompt();
+void print_hex(uint32_t n);
+int htoi(char* str);
+int strlen(const char* str);
 
 #endif

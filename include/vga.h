@@ -39,5 +39,7 @@ void limpatela();
 void cursor_on();
 void cor(enum vga_color cor);
 void cursor_on();
+void cursormov(int x, int y);
+void draw_box(int x, int y, int w, int h, char cor_borda);
 
 #endif

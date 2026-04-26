@@ -12,8 +12,11 @@ unsigned char mes     = 0;
 unsigned char ano     = 0;
 char buffer_tempo[32];
 
+int prompt_y = 0; 
+int prompt_x_inicio = 23;
+
 char cursorstr[5] = "";
-char versao[] = "v0.2.1";
+char versao[] = "v0.2.2";
 char codename[] = "Amanita";
 
 struct idt_entry_struct idt[256] = { [0 ... 255] = {0, 0, 0, 0, 0} };
@@ -160,6 +163,65 @@ void prompt() {
     } else {
         cor(s);
         print("MyceliumOS> ");
-
     }
+
+    prompt_y = cursor_y;
+}
+
+void print_hex(uint32_t n) {
+    char hex_chars[] = "0123456789ABCDEF";
+    char buffer[11];
+    buffer[0] = '0';
+    buffer[1] = 'x';
+    for (int i = 0; i < 8; i++) {
+        buffer[9 - i] = hex_chars[n & 0xF];
+        n >>= 4;
+    }
+    buffer[10] = '\0';
+    print(buffer);
+}
+
+int htoi(char* str) {
+    if (!str) return 0;
+    
+    unsigned int res = 0;
+    int i = 0;
+
+    // Pula espaços iniciais se houver
+    while (str[i] == ' ') i++;
+
+    // Pula o "0x" se o usuário digitou
+    if (str[i] == '0' && (str[i+1] == 'x' || str[i+1] == 'X')) {
+        i += 2;
+    }
+
+    while (str[i] != '\0') {
+        char c = str[i];
+        int valor = 0;
+
+        if (c >= '0' && c <= '9') {
+            valor = c - '0';
+        } else if (c >= 'a' && c <= 'f') {
+            valor = c - 'a' + 10;
+        } else if (c >= 'A' && c <= 'F') {
+            valor = c - 'A' + 10;
+        } else {
+            // Se encontrar qualquer coisa que não seja HEX (espaço, letra errada), para
+            break;
+        }
+
+        // Verifica se o próximo passo vai estourar o limite de 32 bits
+        // (Prevenção de overflow)
+        res = (res << 4) | (valor & 0xF);
+        i++;
+    }
+    return (int)res;
+}
+
+int strlen(const char* str) {
+    int len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
 }
