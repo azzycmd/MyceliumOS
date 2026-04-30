@@ -26,4 +26,4 @@ Thumbs.db
 .directory
 .script
 .cache
-/isodir/boot
+.isodir
