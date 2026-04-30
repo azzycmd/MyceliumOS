@@ -28,7 +28,6 @@ void cmd_time(int argc, char** argv) {
     char s = setcolor;
     cor(CIANO);
     updatertc();
-    print("\n");
     datat();
     print(" - ");
     horat();

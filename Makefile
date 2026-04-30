@@ -42,16 +42,19 @@ setup:
 
 # Linkagem final
 $(KERNEL): $(OBJECTS)
+	mkdir -p bin
 	@echo " [LD] Linkando $@"
 	@$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
 
 # Compilação de arquivos C
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
+	mkdir -p obj
 	@echo " [CC] Compilando $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 # Compilação de arquivos Assembly
 $(OBJDIR)/%.o: $(SRCDIR)/%.asm
+	mkdir -p obj/asm
 	@echo " [AS] Compilando $<"
 	@$(AS) $(ASFLAGS) $< -o $@
 
@@ -65,4 +68,16 @@ run:
 	make clean 
 	make
 	qemu-system-i386 -kernel $(KERNEL) -audiodev pa,id=pa0 -machine pcspk-audiodev=pa0
-.PHONY: all setup clean run
+
+iso: $(KERNEL)
+	mkdir -p isodir/boot/grub
+	cp bin/mycelium.bin isodir/boot/
+	@echo 'menuentry "MyceliumOS 0.2.3" {' > isodir/boot/grub/grub.cfg
+	@echo '    multiboot /boot/mycelium.bin' >> isodir/boot/grub/grub.cfg
+	@echo '    boot' >> isodir/boot/grub/grub.cfg
+	@echo '}' >> isodir/boot/grub/grub.cfg
+	grub-mkrescue -o mycelium.iso isodir
+
+	qemu-system-i386 -cdrom mycelium.iso -audiodev pa,id=pa0 -machine pcspk-audiodev=pa0
+
+.PHONY: all setup clean run iso
