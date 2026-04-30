@@ -60,5 +60,13 @@ void mtom(char* s);
 void itoa(int n, char* str);
 int atoi(char* str);
 void prompt();
+void print_hex(uint32_t n);
+int htoi(char* str);
+void print_hex_byte(uint8_t byte);
+void strcpy(char* dest, char* src);
+int strlen(char* s);
+void removchar(int pos);
+void movfront();
+void movback();
 
 #endif

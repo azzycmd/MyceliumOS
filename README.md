@@ -1,10 +1,10 @@
-# MyceliumOS Amanita (v0.2.1)
+# MyceliumOS Amanita (v0.2.3)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
-    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.1)
+    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.3)
       `.; / ~.  OO:      
        .'  ;-- `.o.'
      ,'  ; ~~--'~
@@ -12,15 +12,15 @@
  _\\;_\\//_________
 ```
 
-## Funcionalidades Novas (v0.2.1)
+## Funcionalidades Novas (v0.2.3)
 
-  - Set - Comando que muda algumas variaveis
+  - Correcao de bugs - acredita, tinha MUITOS deles (odeio insetos)
 
-  - Separacao do som, time (idt) e main - O som foi pro som.c e som.h, o time foi pro lib.c e lib.h e o main ficou la.
+  - Ctrl + Shift + Alt + Q - comando que transforma seu pc numa bomba (reseta ele)
 
-  - Smod - Preparacao do terreno pra smod (super mode). Ativado com "set smod 1".
+  - Hex - le hexadecimal DIRETO DA RAM
 
-  - Correcao do sleep - Mudar o idt de lugar + umas correcoes com o sti consequentemente deixou o sleep podendo ser ativado em comandos, ent correcao no reboot
+  - Maior estabilidade em pcs de verdade - peguei um laptop e ele ta servindo de cobaia pra melhorar o MyceliumOS
 
 ## Comandos Disponíveis
 
@@ -43,6 +43,10 @@
   rtc: Mostra o tempo real
 
   set: Muda o valor de algumas variaveis
+
+  cls: Limpa a tela
+
+  hex: Mostra hexadecimal na ram
 
 ## Como Executar
 

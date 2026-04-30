@@ -1,5 +1,6 @@
 #include "lib.h"
 #include "io.h"
+#include "kbd.h"
 #include "vga.h"
 
 char smod[2] = "0";
@@ -13,7 +14,7 @@ unsigned char ano     = 0;
 char buffer_tempo[32];
 
 char cursorstr[5] = "";
-char versao[] = "v0.2.1";
+char versao[] = "v0.2.3";
 char codename[] = "Amanita";
 
 struct idt_entry_struct idt[256] = { [0 ... 255] = {0, 0, 0, 0, 0} };
@@ -162,4 +163,86 @@ void prompt() {
         print("MyceliumOS> ");
 
     }
+}
+
+void print_hex(uint32_t n) {
+    char* hex_chars = "0123456789ABCDEF";
+    
+    print("0x");
+
+    // Imprime os 8 nibbles (4 bits cada) um por um, do mais significativo para o menos
+    for (int i = 28; i >= 0; i -= 4) {
+        int nibble = (n >> i) & 0x0F;
+        char c[2];
+        c[0] = hex_chars[nibble];
+        c[1] = '\0';
+        print(c);
+    }
+}
+
+void print_hex_byte(uint8_t byte) {
+    char* hex_chars = "0123456789ABCDEF";
+    char c[3];
+    c[0] = hex_chars[(byte >> 4) & 0x0F];
+    c[1] = hex_chars[byte & 0x0F];
+    c[2] = '\0';
+    print(c);
+}
+
+int htoi(char* str) {
+    unsigned int res = 0;
+    int i = 0;
+    while (str[i] == ' ') i++;
+
+    if (str[i] == '0' && (str[i+1] == 'x' || str[i+1] == 'X')) i += 2;
+
+    while (str[i] != '\0') {
+        int v = 0;
+        if (str[i] >= '0' && str[i] <= '9') v = str[i] - '0';
+        else if (str[i] >= 'a' && str[i] <= 'f') v = str[i] - 'a' + 10;
+        else if (str[i] >= 'A' && str[i] <= 'F') v = str[i] - 'A' + 10;
+        else break;
+        res = (res << 4) | (v & 0xF);
+        i++;
+    }
+    return res;
+}
+
+void strcpy(char* dest, char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
+
+int strlen(char* s) {
+    int i = 0;
+    while (s[i] != '\0') i++;
+    return i;
+}
+
+void movback() {
+    int cx = get_cursor_x();
+    int cy = get_cursor_y();
+    if (cx > 0) set_cursor_pos(cx - 1, cy);
+    else if (cy > 0) set_cursor_pos(79, cy - 1);
+}
+
+void movfront() {
+    int cx = get_cursor_x();
+    int cy = get_cursor_y();
+    if (cx < 79) set_cursor_pos(cx + 1, cy);
+    else set_cursor_pos(0, cy + 1);
+}
+
+void removchar(int pos) {
+    if (pos < 0 || pos >= buffer_index) return;
+
+    for (int i = pos; i < buffer_index - 1; i++) {
+        buffer[i] = buffer[i + 1];
+    }
+    buffer_index--;
+    buffer[buffer_index] = '\0';
 }

@@ -39,5 +39,8 @@ void limpatela();
 void cursor_on();
 void cor(enum vga_color cor);
 void cursor_on();
+void set_cursor_pos(int x, int y);
+int get_cursor_x();
+int get_cursor_y();
 
 #endif

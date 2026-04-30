@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 char setcolor = BRANCO;
-int cursorpos = 0;
 char coragr = BRANCO;
 int cursor_x;
 int cursor_y;
@@ -74,6 +73,20 @@ void scroll() {
     }
 }
 
+void set_cursor_pos(int x, int y) {
+    cursor_x = x;
+    cursor_y = y;
+    cursor();
+}
+
+int get_cursor_x() {
+    return cursor_x;
+}
+
+int get_cursor_y() {
+    return cursor_y;
+}
+
 void cursor() {
     uint16_t pos = (cursor_y * 80) + cursor_x;
     
@@ -88,7 +101,7 @@ void cursor() {
 
 void limpatela() {
     for (int i = 0; i < 80 * 25 * 2; i += 2) {
-        video_memory[i] = ' ';itoa(cursor_x, cursor_x_str); 
+        video_memory[i] = ' ';
         video_memory[i+1] = setcolor;
     }
     cursor_x = 0;
