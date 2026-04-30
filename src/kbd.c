@@ -113,7 +113,6 @@ void teclado() {
         while (good & 0x02)
             good = inb(0x64);
         outb(0x64, 0xFE);
-        sleep(1000);
         __asm__ volatile("hlt");
     }
 

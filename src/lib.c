@@ -206,7 +206,7 @@ int htoi(char* str) {
         i++;
     }
     return res;
-}
+        }
 
 void strcpy(char* dest, char* src) {
     int i = 0;
@@ -235,7 +235,7 @@ void movfront() {
     int cy = get_cursor_y();
     if (cx < 79) set_cursor_pos(cx + 1, cy);
     else set_cursor_pos(0, cy + 1);
-}
+    }
 
 void removchar(int pos) {
     if (pos < 0 || pos >= buffer_index) return;

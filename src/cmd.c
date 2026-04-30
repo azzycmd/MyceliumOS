@@ -28,6 +28,7 @@ void cmd_time(int argc, char** argv) {
     char s = setcolor;
     cor(CIANO);
     updatertc();
+    print("\n");
     datat();
     print(" - ");
     horat();
@@ -200,7 +201,7 @@ void cmd_hex(int argc, char** argv) {
 void cmd_fetch(int argc, char** argv) {
     (void)argc; (void)argv;
     int t = setcolor;
-    print("MyceliumOS "); print(codename); print(" "); print(versao);
+    print("\nMyceliumOS "); print(codename); print(" "); print(versao);
     cor(VERMELHO);
     print("\n     .-'~~~-.           ");
     print_error("MyceliumOS "); print_info(codename);
