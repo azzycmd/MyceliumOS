@@ -26,4 +26,9 @@ Thumbs.db
 .directory
 .script
 .cache
-.isodir
+.isodir/
+.isodir/boot/
+.isodir/boot/grub/
+
+obj/
+bin/
