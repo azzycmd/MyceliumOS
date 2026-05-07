@@ -26,9 +26,18 @@ Thumbs.db
 .directory
 .script
 .cache
-.isodir/
-.isodir/boot/
-.isodir/boot/grub/
+isodir/
+isodir/boot/
+isodir/boot/grub/
+*.fd
+*.cfg
+*.conf
+AGENTS.md
+assets/
+.limeline/
+.codex/
+.agents/
+.temp/
 
 obj/
 bin/

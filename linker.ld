@@ -2,11 +2,11 @@ ENTRY(_start)
 
 SECTIONS
 {
-    . = 1M; /* Endereço padrão para kernels Multiboot */
+    . = 1M;
 
     .text : ALIGN(4K)
     {
-        *(.multiboot) /* Garante que o cabeçalho do boot.asm seja o PRIMEIRO */
+        *(.multiboot_header)
         *(.text)
     }
 
@@ -25,4 +25,6 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+
+    kernel_end = .;
 }

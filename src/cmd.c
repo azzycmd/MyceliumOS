@@ -1,13 +1,11 @@
 #include "cmd.h"
 #include "kernel.h"
 #include "lib.h"
-#include "io.h"
 #include "vga.h"
 #include "som.h"
 
 extern char smod[];
 
-// Protótipos auxiliares
 void attvar(char* nome_var, char* novo_valor);
 void cpufetch();
 
@@ -148,10 +146,41 @@ void cmd_cls(int argc, char** argv) {
 void cmd_reboot(int argc, char** argv) {
     (void)argc; (void)argv;
     print_info("\nReiniciando sistema...");
-    sleep(100);
-    uint8_t temp;
-    do { temp = inb(0x64); } while (temp & 0x02);
-    outb(0x64, 0xFE);
+    sleep(20);
+    system_reboot();
+}
+
+void cmd_desligar(int argc, char** argv) {
+    (void)argc; (void)argv;
+    print_info("\nDesligando sistema...");
+    sleep(20);
+    system_poweroff();
+}
+
+void cmd_panic(int argc, char** argv) {
+    static char motivo[192];
+    int pos = 0;
+    if (strdif(smod, "1") == 0) {
+        if (argc < 2) {
+            kernel_panic_at("panic manual solicitado pelo usuario", "shell", 0);
+            return;
+        }
+
+        for (int a = 1; a < argc && pos < 191; a++) {
+            if (a > 1) {
+                motivo[pos++] = ' ';
+            }
+
+            for (int i = 0; argv[a][i] != '\0' && pos < 191; i++) {
+                motivo[pos++] = argv[a][i];
+            }
+        }
+
+        motivo[pos] = '\0';
+        kernel_panic_at(motivo, "shell", 0);
+    } else {
+        print_error("\nsmod: Voce nao tem permissao para esse comando");
+    }
 }
 
 void cmd_set(int argc, char** argv) {    
@@ -164,10 +193,38 @@ void cmd_set(int argc, char** argv) {
     if (strdif(smod, "1") == 0) {
         limpatela();
         cor(VERDE);
-        print("MyceliumOS Terminal ");
-        print(versao);
         cmd_fetch(0, 0);
     }
+}
+
+#define HEX_DUMP_BYTES 64
+#define HEX_SAFE_MIN 0x00000400U
+#define HEX_SAFE_MAX 0x04000000U
+
+static int parse_hex_u32(char* str, uint32_t* out) {
+    uint32_t res = 0;
+    int i = 0;
+    int digits = 0;
+
+    while (str[i] == ' ') i++;
+    if (str[i] == '0' && (str[i + 1] == 'x' || str[i + 1] == 'X')) i += 2;
+
+    while (str[i] != '\0') {
+        int v;
+        if (str[i] >= '0' && str[i] <= '9') v = str[i] - '0';
+        else if (str[i] >= 'a' && str[i] <= 'f') v = str[i] - 'a' + 10;
+        else if (str[i] >= 'A' && str[i] <= 'F') v = str[i] - 'A' + 10;
+        else return 0;
+
+        if (digits >= 8) return 0;
+        res = (res << 4) | (uint32_t)v;
+        digits++;
+        i++;
+    }
+
+    if (digits == 0) return 0;
+    *out = res;
+    return 1;
 }
 
 void cmd_hex(int argc, char** argv) {
@@ -176,10 +233,14 @@ void cmd_hex(int argc, char** argv) {
         return;
     }
 
-    uint32_t endereco = (uint32_t)htoi(argv[1]);
+    uint32_t endereco;
+    if (!parse_hex_u32(argv[1], &endereco)) {
+        print_error("\nErro: endereco hexadecimal invalido.");
+        return;
+    }
     
-    if (endereco < 0x400 && endereco != 0) {
-        print_error("\nErro: Endereco protegido ou invalido.");
+    if (endereco < HEX_SAFE_MIN || endereco > (HEX_SAFE_MAX - HEX_DUMP_BYTES)) {
+        print_error("\nErro: endereco fora da area segura (0x00000400-0x03FFFFC0).");
         return;
     }
 
@@ -189,7 +250,7 @@ void cmd_hex(int argc, char** argv) {
     print_hex(endereco);
     print("\n");
 
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < HEX_DUMP_BYTES; i++) {
         print_hex_byte(ptr[i]); 
         print(" ");
         if ((i + 1) % 8 == 0) print(" ");
@@ -248,11 +309,58 @@ void cmd_uptime(int argc, char** argv) {
     print("\nLigado faz "); print(tempo_str); print(" segundos.");
 }
 
+static void print_bool(char* nome, int valor) {
+    print("\n");
+    print(nome);
+    print(": ");
+    print_info(valor ? "sim" : "nao");
+}
+
+void cmd_bootinfo(int argc, char** argv) {
+    (void)argc; (void)argv;
+    char num[16];
+
+    print("\n--- Bootinfo ---");
+    print("\ncmdline: ");
+    print_info((boot_cmdline && boot_cmdline[0]) ? boot_cmdline : "(vazia)");
+    print("\nvideo pedido: ");
+    print_info(boot_video_request);
+    print("\nvideo ativo: ");
+    print_info(boot_video_mode);
+    print("\nentrada: ");
+    print_info(boot_input_mode);
+    print_bool("safe-mode", boot_safe_mode);
+    print_bool("som", boot_sound_enabled);
+    print_bool("usbdbg", boot_usb_debug);
+    print_bool("framebuffer", usar_framebuffer);
+
+    print("\nterminal: ");
+    itoa(max_cols, num);
+    print_info(num);
+    print("x");
+    itoa(max_rows, num);
+    print_info(num);
+
+    if (usar_framebuffer) {
+        print("\nfb: ");
+        itoa((int)vga_framebuffer_width(), num);
+        print_info(num);
+        print("x");
+        itoa((int)vga_framebuffer_height(), num);
+        print_info(num);
+        print("x");
+        itoa((int)vga_framebuffer_bpp(), num);
+        print_info(num);
+    }
+}
+
 cmd lista_comandos[] = {
     {"ajuda", cmd_ajuda}, {"cls", cmd_cls}, {"reboot", cmd_reboot},
+    {"desligar", cmd_desligar},
     {"oi", cmd_oi}, {"beep", cmd_beep}, {"cpuinfo", cmd_cpu},
     {"fetch", cmd_fetch}, {"color", cmd_color}, {"uptime", cmd_uptime},
-    {"echo", cmd_echo}, {"set", cmd_set}, {"rtc", cmd_time}, {"hex", cmd_hex}
+    {"echo", cmd_echo}, {"set", cmd_set}, {"rtc", cmd_time}, {"hex", cmd_hex},
+    {"panic", cmd_panic}, {"bootinfo", cmd_bootinfo}
 };
 
 int num_comandos = sizeof(lista_comandos) / sizeof(cmd);

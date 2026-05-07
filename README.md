@@ -1,10 +1,10 @@
-# MyceliumOS Amanita (v0.2.3)
+# MyceliumOS Amanita (v0.2.4)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
-    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.3)
+    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.4)
       `.; / ~.  OO:      
        .'  ;-- `.o.'
      ,'  ; ~~--'~
@@ -12,15 +12,15 @@
  _\\;_\\//_________
 ```
 
-## Funcionalidades Novas (v0.2.3)
+## Funcionalidades Novas (v0.2.4)
 
-  - Correcao de bugs - acredita, tinha MUITOS deles (odeio insetos)
+  - Ajustes na entrada de teclado para dongles USB e trackpads.
 
-  - Ctrl + Shift + Alt + Q - comando que transforma seu pc numa bomba (reseta ele)
+  - Sistema USB xHCI e HCI
 
-  - Hex - le hexadecimal DIRETO DA RAM
+  - Auto coloca entrada xHCI ou PS/2
 
-  - Maior estabilidade em pcs de verdade - peguei um laptop e ele ta servindo de cobaia pra melhorar o MyceliumOS
+  - Melhor compatibilidade.
 
 ## Comandos Disponíveis
 
@@ -48,9 +48,11 @@
 
   hex: Mostra hexadecimal na ram
 
+  bootinfo: Mostra informacoes do boot
+
 ## Como Executar
 
   Execute o arquivo "Makefile". Para compilar, use "make". Para rodar, use "make run". Para limpar, "make clean"
 
-Autor: [azzycmd]
-Licença: MIT
+### Autor: [azzycmd] 
+### Licença: MIT

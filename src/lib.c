@@ -14,13 +14,60 @@ unsigned char ano     = 0;
 char buffer_tempo[32];
 
 char cursorstr[5] = "";
-char versao[] = "v0.2.3";
+char versao[] = "v0.2.4";
 char codename[] = "Amanita";
 
 struct idt_entry_struct idt[256] = { [0 ... 255] = {0, 0, 0, 0, 0} };
 struct idt_ptr_struct idtp = {0, 0};
 
-unsigned int timer_ticks = 0;
+volatile unsigned int timer_ticks = 0;
+
+uint32_t panic_vector = 0xFFFFFFFF;
+uint32_t panic_error_code = 0;
+uint32_t panic_eip = 0;
+uint32_t panic_cs = 0;
+uint32_t panic_eflags = 0;
+uint32_t panic_cr0 = 0;
+uint32_t panic_cr2 = 0;
+uint32_t panic_cr3 = 0;
+uint32_t panic_cr4 = 0;
+char* panic_origin_file = 0;
+int panic_origin_line = 0;
+
+extern void isr0();
+extern void isr1();
+extern void isr2();
+extern void isr3();
+extern void isr4();
+extern void isr5();
+extern void isr6();
+extern void isr7();
+extern void isr8();
+extern void isr9();
+extern void isr10();
+extern void isr11();
+extern void isr12();
+extern void isr13();
+extern void isr14();
+extern void isr15();
+extern void isr16();
+extern void isr17();
+extern void isr18();
+extern void isr19();
+extern void isr20();
+extern void isr21();
+extern void isr22();
+extern void isr23();
+extern void isr24();
+extern void isr25();
+extern void isr26();
+extern void isr27();
+extern void isr28();
+extern void isr29();
+extern void isr30();
+extern void isr31();
+
+#define SET_EXCEPTION_GATE(n) idt_set_gate(n, (uint32_t)(unsigned long)isr##n, 0x08, 0x8E)
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt[num].base_lo = base & 0xFFFF;
@@ -34,7 +81,58 @@ void idt_install() {
     idtp.limit = (uint16_t)(sizeof(struct idt_entry_struct) * 256) - 1;
     idtp.base = (uint32_t)(unsigned long)&idt; 
     for(int i = 0; i < 256; i++) idt_set_gate(i, 0, 0, 0);
+    SET_EXCEPTION_GATE(0);
+    SET_EXCEPTION_GATE(1);
+    SET_EXCEPTION_GATE(2);
+    SET_EXCEPTION_GATE(3);
+    SET_EXCEPTION_GATE(4);
+    SET_EXCEPTION_GATE(5);
+    SET_EXCEPTION_GATE(6);
+    SET_EXCEPTION_GATE(7);
+    SET_EXCEPTION_GATE(8);
+    SET_EXCEPTION_GATE(9);
+    SET_EXCEPTION_GATE(10);
+    SET_EXCEPTION_GATE(11);
+    SET_EXCEPTION_GATE(12);
+    SET_EXCEPTION_GATE(13);
+    SET_EXCEPTION_GATE(14);
+    SET_EXCEPTION_GATE(15);
+    SET_EXCEPTION_GATE(16);
+    SET_EXCEPTION_GATE(17);
+    SET_EXCEPTION_GATE(18);
+    SET_EXCEPTION_GATE(19);
+    SET_EXCEPTION_GATE(20);
+    SET_EXCEPTION_GATE(21);
+    SET_EXCEPTION_GATE(22);
+    SET_EXCEPTION_GATE(23);
+    SET_EXCEPTION_GATE(24);
+    SET_EXCEPTION_GATE(25);
+    SET_EXCEPTION_GATE(26);
+    SET_EXCEPTION_GATE(27);
+    SET_EXCEPTION_GATE(28);
+    SET_EXCEPTION_GATE(29);
+    SET_EXCEPTION_GATE(30);
+    SET_EXCEPTION_GATE(31);
     __asm__ volatile("lidt (%0)" : : "r"(&idtp));
+}
+
+void fpu_init() {
+    uint32_t cr0;
+    uint32_t cr4;
+
+    __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1U << 2);
+    cr0 &= ~(1U << 3);
+    cr0 |=  (1U << 1);
+    cr0 |=  (1U << 5);
+    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0));
+
+    __asm__ volatile("mov %%cr4, %0" : "=r"(cr4));
+    cr4 |= (1U << 9);
+    cr4 |= (1U << 10);
+    __asm__ volatile("mov %0, %%cr4" : : "r"(cr4));
+
+    __asm__ volatile("fninit");
 }
 
 void sleep(uint32_t milissegundos) {
@@ -54,7 +152,127 @@ void reprogramar_pic() {
     outb(0x21, 0x20); outb(0xA1, 0x28);
     outb(0x21, 0x04); outb(0xA1, 0x02);
     outb(0x21, 0x01); outb(0xA1, 0x01);
-    outb(0x21, 0x0);  outb(0xA1, 0x0);
+    outb(0x21, 0xFC); outb(0xA1, 0xFF);
+}
+
+void system_reboot() {
+    uint8_t temp;
+
+    __asm__ volatile("cli");
+    do {
+        temp = inb(0x64);
+    } while (temp & 0x02);
+
+    outb(0x64, 0xFE);
+    while (1) __asm__ volatile("hlt");
+}
+
+void system_poweroff() {
+    __asm__ volatile("cli");
+
+    outw(0x604, 0x2000);
+    outw(0xB004, 0x2000);
+    outw(0x4004, 0x3400);
+
+    while (1) __asm__ volatile("hlt");
+}
+
+static void panic_append(char* destino, int* pos, char* texto, int limite) {
+    if (!destino || !pos || !texto || limite <= 0) return;
+
+    for (int i = 0; texto[i] != '\0' && *pos < limite - 1; i++) {
+        destino[*pos] = texto[i];
+        *pos = *pos + 1;
+    }
+    destino[*pos] = '\0';
+}
+
+static void panic_append_hex(char* destino, int* pos, uint32_t valor, int limite) {
+    char* hex = "0123456789ABCDEF";
+    panic_append(destino, pos, "0x", limite);
+
+    for (int i = 28; i >= 0; i -= 4) {
+        char c[2];
+        c[0] = hex[(valor >> i) & 0x0F];
+        c[1] = '\0';
+        panic_append(destino, pos, c, limite);
+    }
+}
+
+void kernel_panic_at(char* motivo, char* arquivo, int linha) {
+    static char panic_motivo[256];
+    int pos = 0;
+
+    __asm__ volatile("cli");
+    panic_origin_file = arquivo;
+    panic_origin_line = linha;
+    panic_vector = 0xFFFFFFFF;
+    panic_error_code = 0;
+    panic_eip = 0;
+    panic_cs = 0;
+    panic_eflags = 0;
+    __asm__ volatile("mov %%cr0, %0" : "=r"(panic_cr0));
+    __asm__ volatile("mov %%cr2, %0" : "=r"(panic_cr2));
+    __asm__ volatile("mov %%cr3, %0" : "=r"(panic_cr3));
+    __asm__ volatile("mov %%cr4, %0" : "=r"(panic_cr4));
+
+    panic_append(panic_motivo, &pos,
+                 motivo ? motivo : "falha fatal desconhecida", 256);
+
+    vga_panic_screen(panic_motivo);
+    while (1) {
+        __asm__ volatile("hlt");
+    }
+}
+
+void kernel_panic(char* motivo) {
+    kernel_panic_at(motivo, 0, 0);
+}
+
+void exception_handler(uint32_t vetor, uint32_t erro, uint32_t eip,
+                       uint32_t cs, uint32_t eflags) {
+    static char motivo[192];
+    static char* nomes[] = {
+        "Division By Zero", "Debug", "Non Maskable Interrupt", "Breakpoint",
+        "Overflow", "Bound Range Exceeded", "Invalid Opcode",
+        "Device Not Available", "Double Fault", "Coprocessor Segment Overrun",
+        "Invalid TSS", "Segment Not Present", "Stack Segment Fault",
+        "General Protection Fault", "Page Fault", "Reserved",
+        "x87 Floating Point", "Alignment Check", "Machine Check",
+        "SIMD Floating Point", "Virtualization", "Control Protection",
+        "Reserved", "Reserved", "Reserved", "Reserved", "Reserved",
+        "Reserved", "Hypervisor Injection", "VMM Communication",
+        "Security Exception", "Reserved"
+    };
+    char numero[16];
+    int pos = 0;
+
+    panic_vector = vetor;
+    panic_error_code = erro;
+    panic_eip = eip;
+    panic_cs = cs;
+    panic_eflags = eflags;
+
+    panic_append(motivo, &pos, "Excecao de CPU: ", 192);
+    if (vetor < 32) {
+        panic_append(motivo, &pos, nomes[vetor], 192);
+    } else {
+        panic_append(motivo, &pos, "Desconhecida", 192);
+    }
+    panic_append(motivo, &pos, " (#", 192);
+    itoa((int)vetor, numero);
+    panic_append(motivo, &pos, numero, 192);
+    panic_append(motivo, &pos, ") erro=", 192);
+    panic_append_hex(motivo, &pos, erro, 192);
+
+    if (vetor == 14) {
+        uint32_t cr2;
+        __asm__ volatile("mov %%cr2, %0" : "=r"(cr2));
+        panic_append(motivo, &pos, " cr2=", 192);
+        panic_append_hex(motivo, &pos, cr2, 192);
+    }
+
+    kernel_panic_at(motivo, "cpu exception", 0);
 }
 
 int strdif(char* s1, char* s2) {
@@ -118,6 +336,18 @@ int atoi(char* str) {
     return res;
 }
 
+int strlen(char* str) {
+    int i = 0;
+
+    if (!str) return 0;
+
+    while (str[i] != '\0') {
+        i++;
+    }
+
+    return i;
+}
+
 void updatertc() {
     segundo = bcdtodecimal(cmos(0x00));
     minuto  = bcdtodecimal(cmos(0x02));
@@ -167,17 +397,16 @@ void prompt() {
 
 void print_hex(uint32_t n) {
     char* hex_chars = "0123456789ABCDEF";
-    
-    print("0x");
+    char out[11];
 
-    // Imprime os 8 nibbles (4 bits cada) um por um, do mais significativo para o menos
+    out[0] = '0';
+    out[1] = 'x';
     for (int i = 28; i >= 0; i -= 4) {
         int nibble = (n >> i) & 0x0F;
-        char c[2];
-        c[0] = hex_chars[nibble];
-        c[1] = '\0';
-        print(c);
+        out[2 + ((28 - i) / 4)] = hex_chars[nibble];
     }
+    out[10] = '\0';
+    print(out);
 }
 
 void print_hex_byte(uint8_t byte) {
@@ -217,23 +446,17 @@ void strcpy(char* dest, char* src) {
     dest[i] = '\0';
 }
 
-int strlen(char* s) {
-    int i = 0;
-    while (s[i] != '\0') i++;
-    return i;
-}
-
 void movback() {
     int cx = get_cursor_x();
     int cy = get_cursor_y();
     if (cx > 0) set_cursor_pos(cx - 1, cy);
-    else if (cy > 0) set_cursor_pos(79, cy - 1);
+    else if (cy > 0) set_cursor_pos(max_cols - 1, cy - 1);
 }
 
 void movfront() {
     int cx = get_cursor_x();
     int cy = get_cursor_y();
-    if (cx < 79) set_cursor_pos(cx + 1, cy);
+    if (cx < max_cols - 1) set_cursor_pos(cx + 1, cy);
     else set_cursor_pos(0, cy + 1);
     }
 

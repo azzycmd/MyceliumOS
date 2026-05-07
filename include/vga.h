@@ -1,9 +1,13 @@
 #ifndef VGA_H
 #define VGA_H
 
+#include <stdint.h>
+
 #define video_memory ((char*)0xB8000)
-#define max_rows 25
-#define max_cols 80
+extern int max_rows;
+extern int max_cols;
+
+extern int usar_framebuffer;
 
 extern char setcolor;
 extern int cursorpos;
@@ -42,5 +46,14 @@ void cursor_on();
 void set_cursor_pos(int x, int y);
 int get_cursor_x();
 int get_cursor_y();
+void vga_init_text(void);
+void vga_init_text_fallback(uint32_t mb_info);
+void vga_init_from_multiboot(uint32_t mb_info);
+void vga_panic_screen(char *motivo);
+void* vga_map_mmio_region(uint64_t phys_addr, uint32_t size, uint32_t virt_base);
+char* vga_mode_name(void);
+uint32_t vga_framebuffer_width(void);
+uint32_t vga_framebuffer_height(void);
+uint8_t vga_framebuffer_bpp(void);
 
 #endif

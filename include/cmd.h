@@ -23,14 +23,14 @@ void cmd_echo(int argc, char** argv);
 void cmd_cpu(int argc, char** argv);
 void cpufetch();
 void cmd_oi(int argc, char** argv);
-void cmd_limpar(int argc, char** argv);
 void cmd_reboot(int argc, char** argv);
+void cmd_desligar(int argc, char** argv);
 void cmd_fetch(int argc, char** argv);
 void cmd_color(int argc, char** argv);
 void cmd_uptime(int argc, char** argv);
+void cmd_bootinfo(int argc, char** argv);
 void pcmd(char* input);
 void cpuid(uint32_t code, uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx);
-void regvar(char* nome, char* valor_inicial);
 void init_vars();
 void attvar(char* nome_var, char* novo_valor);
 
