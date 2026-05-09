@@ -38,6 +38,7 @@ assets/
 .codex/
 .agents/
 .temp/
+wiki/
 
 obj/
 bin/

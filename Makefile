@@ -98,7 +98,7 @@ iso: $(KERNEL)
 # =============================================================
 run: 
 	$(MAKE) clean
-	$(MAKE) iso
+	$(MAKE) LIMINE_DEFAULT_ENTRY=2 iso
 	@if [ ! -f ovmf_code.fd ]; then \
 		echo ""; \
 		echo "ERRO: ovmf_code.fd nao encontrado!"; \
@@ -118,7 +118,7 @@ run:
 
 run-usb:
 	$(MAKE) clean
-	$(MAKE) LIMINE_DEFAULT_ENTRY=3 iso
+	$(MAKE) LIMINE_DEFAULT_ENTRY=4 iso
 	@if [ ! -f ovmf_code.fd ]; then \
 		echo ""; \
 		echo "ERRO: ovmf_code.fd nao encontrado!"; \
@@ -151,7 +151,7 @@ run-legacy: iso
 
 strict: 
 	$(MAKE) clean
-	$(MAKE) LIMINE_DEFAULT_ENTRY=1 iso
+	$(MAKE) LIMINE_DEFAULT_ENTRY=2 iso
 	@if [ ! -f ovmf_code.fd ]; then \
 		echo ""; \
 		echo "ERRO: ovmf_code.fd nao encontrado!"; \

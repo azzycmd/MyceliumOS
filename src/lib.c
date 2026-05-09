@@ -14,13 +14,20 @@ unsigned char ano     = 0;
 char buffer_tempo[32];
 
 char cursorstr[5] = "";
-char versao[] = "v0.2.4";
+char versao[] = "v0.2.5";
 char codename[] = "Amanita";
 
 struct idt_entry_struct idt[256] = { [0 ... 255] = {0, 0, 0, 0, 0} };
 struct idt_ptr_struct idtp = {0, 0};
+static int idt_ready = 0;
 
 volatile unsigned int timer_ticks = 0;
+volatile uint32_t irq_timer_count = 0;
+volatile uint32_t irq_keyboard_count = 0;
+volatile uint32_t irq_mouse_count = 0;
+kstream_t kstream_active = KSTREAM_STDOUT;
+uint32_t kstream_stdout_writes = 0;
+uint32_t kstream_stderr_writes = 0;
 
 uint32_t panic_vector = 0xFFFFFFFF;
 uint32_t panic_error_code = 0;
@@ -31,8 +38,35 @@ uint32_t panic_cr0 = 0;
 uint32_t panic_cr2 = 0;
 uint32_t panic_cr3 = 0;
 uint32_t panic_cr4 = 0;
+uint32_t panic_code = PANIC_CODE_UNKNOWN;
 char* panic_origin_file = 0;
 int panic_origin_line = 0;
+
+void kstream_write(kstream_t stream, char* msg) {
+    kstream_active = stream;
+    if (stream == KSTREAM_STDERR) {
+        kstream_stderr_writes++;
+    } else {
+        kstream_stdout_writes++;
+    }
+    print(msg);
+    kstream_active = KSTREAM_STDOUT;
+}
+
+void kstream_write_color(kstream_t stream, char* msg, enum vga_color color) {
+    char old = setcolor;
+
+    kstream_active = stream;
+    if (stream == KSTREAM_STDERR) {
+        kstream_stderr_writes++;
+    } else {
+        kstream_stdout_writes++;
+    }
+    cor(color);
+    print(msg);
+    cor(old);
+    kstream_active = KSTREAM_STDOUT;
+}
 
 extern void isr0();
 extern void isr1();
@@ -70,6 +104,11 @@ extern void isr31();
 #define SET_EXCEPTION_GATE(n) idt_set_gate(n, (uint32_t)(unsigned long)isr##n, 0x08, 0x8E)
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    if ((base != 0 || flags != 0) && sel == 0) {
+        panic_code(PANIC_CODE_IDT_SELECTOR,
+                   "IDT gate invalido: seletor nulo");
+    }
+
     idt[num].base_lo = base & 0xFFFF;
     idt[num].base_hi = (base >> 16) & 0xFFFF;
     idt[num].sel     = sel;
@@ -78,6 +117,10 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
 }
 
 void idt_install() {
+    panic_if_code((uint32_t)(unsigned long)&idt == 0,
+                  PANIC_CODE_IDT_NULL,
+                  "IDT invalida: tabela em endereco nulo");
+
     idtp.limit = (uint16_t)(sizeof(struct idt_entry_struct) * 256) - 1;
     idtp.base = (uint32_t)(unsigned long)&idt; 
     for(int i = 0; i < 256; i++) idt_set_gate(i, 0, 0, 0);
@@ -114,6 +157,28 @@ void idt_install() {
     SET_EXCEPTION_GATE(30);
     SET_EXCEPTION_GATE(31);
     __asm__ volatile("lidt (%0)" : : "r"(&idtp));
+    idt_ready = 1;
+}
+
+int idt_is_ready(void) {
+    if (!idt_ready) return 0;
+    if (idtp.base == 0) return 0;
+    if (idtp.limit != (uint16_t)(sizeof(struct idt_entry_struct) * 256) - 1) return 0;
+    if (idt[0].base_lo == 0 && idt[0].base_hi == 0) return 0;
+    if (idt[14].base_lo == 0 && idt[14].base_hi == 0) return 0;
+    return 1;
+}
+
+uint32_t idt_gate_base(uint8_t num) {
+    return ((uint32_t)idt[num].base_hi << 16) | idt[num].base_lo;
+}
+
+uint16_t idt_gate_selector(uint8_t num) {
+    return idt[num].sel;
+}
+
+uint8_t idt_gate_flags(uint8_t num) {
+    return idt[num].flags;
 }
 
 void fpu_init() {
@@ -137,12 +202,18 @@ void fpu_init() {
 
 void sleep(uint32_t milissegundos) {
     uint32_t tempo_final = timer_ticks + milissegundos;
+    if (milissegundos > 0) {
+        panic_if_code(!idt_is_ready(),
+                      PANIC_CODE_SLEEP_EARLY,
+                      "sleep chamado antes da IDT/timer estarem prontos");
+    }
     while (timer_ticks < tempo_final) {
         __asm__ volatile("hlt");
     }
 }
 
 void timer_handler() {
+    irq_timer_count++;
     timer_ticks++;
     outb(0x20, 0x20); // EOI para o Timer
 }
@@ -199,18 +270,20 @@ static void panic_append_hex(char* destino, int* pos, uint32_t valor, int limite
     }
 }
 
-void kernel_panic_at(char* motivo, char* arquivo, int linha) {
+void kernel_panic_code_at(uint32_t code, char* motivo, char* arquivo, int linha) {
     static char panic_motivo[256];
     int pos = 0;
 
     __asm__ volatile("cli");
+    panic_code = code ? code : PANIC_CODE_UNKNOWN;
     panic_origin_file = arquivo;
     panic_origin_line = linha;
-    panic_vector = 0xFFFFFFFF;
-    panic_error_code = 0;
-    panic_eip = 0;
-    panic_cs = 0;
-    panic_eflags = 0;
+    if (panic_vector == 0xFFFFFFFF) {
+        panic_error_code = 0;
+        panic_eip = 0;
+        panic_cs = 0;
+        panic_eflags = 0;
+    }
     __asm__ volatile("mov %%cr0, %0" : "=r"(panic_cr0));
     __asm__ volatile("mov %%cr2, %0" : "=r"(panic_cr2));
     __asm__ volatile("mov %%cr3, %0" : "=r"(panic_cr3));
@@ -223,6 +296,10 @@ void kernel_panic_at(char* motivo, char* arquivo, int linha) {
     while (1) {
         __asm__ volatile("hlt");
     }
+}
+
+void kernel_panic_at(char* motivo, char* arquivo, int linha) {
+    kernel_panic_code_at(PANIC_CODE_UNKNOWN, motivo, arquivo, linha);
 }
 
 void kernel_panic(char* motivo) {
@@ -272,7 +349,7 @@ void exception_handler(uint32_t vetor, uint32_t erro, uint32_t eip,
         panic_append_hex(motivo, &pos, cr2, 192);
     }
 
-    kernel_panic_at(motivo, "cpu exception", 0);
+    kernel_panic_code_at(PANIC_CODE_CPU_BASE + vetor, motivo, "cpu exception", 0);
 }
 
 int strdif(char* s1, char* s2) {

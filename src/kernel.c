@@ -9,7 +9,9 @@
 /* Magic number do Multiboot2 que o bootloader coloca em EAX */
 #define MULTIBOOT2_MAGIC 0x36d76289
 #define MULTIBOOT_TAG_TYPE_CMDLINE 1
+#define MULTIBOOT_INFO_MAX_SIZE 0x100000U
 
+int booting = 1;
 char* boot_cmdline = "";
 char* boot_video_request = "auto";
 char* boot_video_mode = "unknown";
@@ -17,6 +19,8 @@ char* boot_input_mode = "auto";
 int boot_safe_mode = 0;
 int boot_sound_enabled = 1;
 int boot_usb_debug = 0;
+uint32_t boot_multiboot_info = 0;
+uint32_t boot_multiboot_total_size = 0;
 
 typedef struct {
     uint32_t total_size;
@@ -48,6 +52,42 @@ static char* multiboot_cmdline(uint32_t mb_info) {
     return 0;
 }
 
+static void early_boot_panic_code(uint32_t code, char* motivo) {
+    vga_init_text();
+    cursor_on();
+    limpatela();
+    kernel_panic_code_at(code, motivo, "boot", 0);
+}
+
+static void validate_multiboot_or_panic(uint32_t magic, uint32_t mb_info) {
+    if (magic != MULTIBOOT2_MAGIC) {
+        early_boot_panic_code(PANIC_CODE_BOOT_MAGIC,
+                              "Magic Multiboot2 invalido; bootloader nao entregou o kernel corretamente");
+    }
+
+    if (mb_info == 0) {
+        early_boot_panic_code(PANIC_CODE_BOOT_MB_PTR,
+                              "Multiboot2 invalido: ponteiro de informacoes ausente");
+    }
+
+    multiboot_info_t *info = (multiboot_info_t*)mb_info;
+    if (info->total_size < sizeof(multiboot_info_t) ||
+        info->total_size > MULTIBOOT_INFO_MAX_SIZE) {
+        early_boot_panic_code(PANIC_CODE_BOOT_MB_SIZE,
+                              "Multiboot2 invalido: tamanho da estrutura fora do esperado");
+    }
+}
+
+static void validate_irq_handlers_or_panic(uint32_t timer, uint32_t keyboard,
+                                           uint32_t mouse) {
+    panic_if_code(timer == 0, PANIC_CODE_IRQ_HANDLER,
+                  "IRQ timer sem handler valido");
+    panic_if_code(keyboard == 0, PANIC_CODE_IRQ_HANDLER,
+                  "IRQ teclado sem handler valido");
+    panic_if_code(mouse == 0, PANIC_CODE_IRQ_HANDLER,
+                  "IRQ mouse sem handler valido");
+}
+
 static int cmdline_has(char *cmdline, const char *needle) {
     if (!cmdline || !needle) return 0;
 
@@ -73,6 +113,10 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
     extern void timer_wrapper();
     extern void keyboard_wrapper();
     extern void mouse_wrapper();
+
+    validate_multiboot_or_panic(magic, mb_info);
+    boot_multiboot_info = mb_info;
+    boot_multiboot_total_size = ((multiboot_info_t*)mb_info)->total_size;
 
     char *cmdline = multiboot_cmdline(mb_info);
     int boot_action = 0;
@@ -129,7 +173,8 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
     } else {
         vga_init_from_multiboot(mb_info);
         if (force_fb_video && !usar_framebuffer) {
-            panic("video=fb solicitado, mas nenhum framebuffer foi entregue pelo bootloader");
+            panic_code(PANIC_CODE_VIDEO_FB,
+                       "video=fb solicitado, mas nenhum framebuffer foi entregue pelo bootloader");
         }
     }
     boot_video_mode = vga_mode_name();
@@ -151,11 +196,6 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
         system_poweroff();
     }
 
-    /* Avisa se não foi carregado por um bootloader Multiboot2 válido */
-    if (magic != MULTIBOOT2_MAGIC) {
-        panic("Magic Multiboot2 invalido; bootloader nao entregou o kernel corretamente");
-    }
-
     if (usb_native_input) {
         teclado_set_ps2_enabled(0);
     } else if (usb_legacy_input) {
@@ -164,10 +204,15 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
         teclado_init();
     }
     idt_install();
+    validate_irq_handlers_or_panic((uint32_t)(unsigned long)timer_wrapper,
+                                   (uint32_t)(unsigned long)keyboard_wrapper,
+                                   (uint32_t)(unsigned long)mouse_wrapper);
     reprogramar_pic();
     idt_set_gate(32, (uint32_t)(unsigned long)timer_wrapper,   0x08, 0x8E);
     idt_set_gate(33, (uint32_t)(unsigned long)keyboard_wrapper, 0x08, 0x8E);
     idt_set_gate(44, (uint32_t)(unsigned long)mouse_wrapper,    0x08, 0x8E);
+    panic_if_code(!idt_is_ready(), PANIC_CODE_IDT_NOT_READY,
+                  "IDT nao ficou pronta apos instalacao");
     cpit(100);
     __asm__ volatile("sti");
 
@@ -184,8 +229,9 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
     }
 
     limpatela();
+    sleep(50);
 
-    cmd_fetch(0, 0);
+    (void)cmd_fetch(0, 0);
     if (usb_native_input) {
         boot_input_mode = "usb-native";
         usb_kbd_init();
@@ -208,6 +254,7 @@ int kernel_main(uint32_t magic, uint32_t mb_info) {
         boot_input_mode = "legacy";
         USBDBG_INFO("Entrada PS/2/USB legacy ativa.\n");
     }
+    booting = 0;
     prompt();
     buffer_index = 0;
     buffer[0] = '\0';

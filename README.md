@@ -1,10 +1,10 @@
-# MyceliumOS Amanita (v0.2.4)
+# MyceliumOS Amanita (v0.2.5)
 
 ```text
       .-'~~~-.           
     .'o  oOOOo.`         MyceliumOS
    :~~~-.oOo   o.  `     Kernel: Mycelium-x86
-    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.4)
+    `. \ ~-.  oOOo.      Versao: Amanita (v0.2.5)
       `.; / ~.  OO:      
        .'  ;-- `.o.'
      ,'  ; ~~--'~
@@ -12,47 +12,30 @@
  _\\;_\\//_________
 ```
 
-## Funcionalidades Novas (v0.2.4)
+## Destaques da v0.2.5
 
-  - Ajustes na entrada de teclado para dongles USB e trackpads.
+- Shell com parser de aspas, escapes e limite claro de 10 argumentos.
+- Codigos de erro por comando, com ultimo status em `$status`.
+- `ajuda <comando>` com uso detalhado.
+- Aliases: `help`, `clear`, `shutdown`.
+- Historico navegavel em RAM e autocomplete parcial com TAB.
+- Separacao logica entre stdout/stderr.
+- Kernel panic para erros comuns e `Code` na tela de panic.
+- Comandos de diagnostico: `cpuregs`, `idt`, `irq`, `memmap`, `pci`, `kbdinfo`, `ticks`, `bench`.
+- `hex <endereco> [bytes]` com dump paginado.
+- `panic --simulate irqstorm` para teste controlado de panic.
 
-  - Sistema USB xHCI e HCI
+## Comandos
 
-  - Auto coloca entrada xHCI ou PS/2
+Principais comandos de shell:
 
-  - Melhor compatibilidade.
+- `ajuda`, `echo`, `uptime`, `fetch`, `color`, `beep`
+- `reboot`, `desligar`, `cpuinfo`, `rtc`, `set`, `cls`
+- `hex`, `panic`, `bootinfo`
+- `cpuregs`, `idt`, `irq`, `memmap`, `pci`, `kbdinfo`, `ticks`, `bench`
 
-## Comandos Disponíveis
+## Autor e Licenca
 
-  ajuda: Lista todos os comandos integrados.
+Autor: azzycmd
 
-  echo: Imprime texto ou variáveis de sistema.
-
-  uptime: Mostra o tempo de atividade do sistema.
-
-  fetch: Exibe informações do sistema com arte ASCII.
-
-  color: Altera a cor do terminal.
-
-  beep: Gera um som em uma frequência específica.
-
-  reboot: Reinicia o sistema via Triple Fault (agora com tempo pra resetar).
-
-  cpuinfo: Mostra fabricante e nome da CPU
-
-  rtc: Mostra o tempo real
-
-  set: Muda o valor de algumas variaveis
-
-  cls: Limpa a tela
-
-  hex: Mostra hexadecimal na ram
-
-  bootinfo: Mostra informacoes do boot
-
-## Como Executar
-
-  Execute o arquivo "Makefile". Para compilar, use "make". Para rodar, use "make run". Para limpar, "make clean"
-
-### Autor: [azzycmd] 
-### Licença: MIT
+Licenca: MIT

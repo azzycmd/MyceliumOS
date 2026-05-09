@@ -14,8 +14,10 @@ int ctrlon = 0;
 int alton = 0;
 
 static int cursor_buffer = 0;
-static char historico[256] = {0};
-static int tem_historico = 0;
+#define KBD_HISTORY_SIZE 16
+static char historico[KBD_HISTORY_SIZE][256];
+static int historico_count = 0;
+static int historico_pos = -1;
 
 static volatile uint8_t fila_scancodes[64];
 static volatile int fila_inicio = 0;
@@ -48,6 +50,95 @@ static void redesenhar_linha_a_partir_cursor(int old_buffer_index) {
     print(&buffer[cursor_buffer]);
     print_spaces(old_buffer_index - buffer_index);
     set_cursor_pos(xa, ya);
+}
+
+static void limpar_linha_atual(void) {
+    while (cursor_buffer > 0) {
+        print("\b");
+        cursor_buffer--;
+    }
+    for (int i = 0; i < buffer_index; i++) {
+        print(" ");
+    }
+    for (int i = 0; i < buffer_index; i++) {
+        print("\b");
+    }
+}
+
+static void carregar_linha(char* texto) {
+    limpar_linha_atual();
+    strcpy(buffer, texto);
+    buffer_index = strlen(buffer);
+    cursor_buffer = buffer_index;
+    print(buffer);
+}
+
+static void historico_adicionar(char* texto) {
+    if (!texto || texto[0] == '\0') return;
+
+    if (historico_count > 0 && strdif(historico[historico_count - 1], texto) == 0) {
+        historico_pos = historico_count;
+        return;
+    }
+
+    if (historico_count < KBD_HISTORY_SIZE) {
+        strcpy(historico[historico_count], texto);
+        historico_count++;
+    } else {
+        for (int i = 1; i < KBD_HISTORY_SIZE; i++) {
+            strcpy(historico[i - 1], historico[i]);
+        }
+        strcpy(historico[KBD_HISTORY_SIZE - 1], texto);
+    }
+    historico_pos = historico_count;
+}
+
+static void historico_subir(void) {
+    if (historico_count == 0) return;
+    if (historico_pos < 0 || historico_pos > historico_count) {
+        historico_pos = historico_count;
+    }
+    if (historico_pos > 0) {
+        historico_pos--;
+        carregar_linha(historico[historico_pos]);
+    }
+}
+
+static void historico_descer(void) {
+    if (historico_count == 0 || historico_pos < 0) return;
+    if (historico_pos < historico_count - 1) {
+        historico_pos++;
+        carregar_linha(historico[historico_pos]);
+    } else {
+        historico_pos = historico_count;
+        carregar_linha("");
+    }
+}
+
+static void executar_buffer(void) {
+    buffer[buffer_index] = '\0';
+    if (buffer_index > 0) {
+        historico_adicionar(buffer);
+        pcmd(buffer);
+    } else {
+        prompt();
+    }
+    buffer_index = 0;
+    cursor_buffer = 0;
+    buffer[0] = '\0';
+}
+
+static void tentar_autocomplete(void) {
+    int old_cursor = cursor_buffer;
+
+    if (cmd_autocomplete(buffer, &cursor_buffer)) {
+        buffer_index = strlen(buffer);
+        print(&buffer[old_cursor]);
+        return;
+    }
+
+    buffer_index = strlen(buffer);
+    cursor_buffer = old_cursor;
 }
 
 unsigned char keyboard_map[128] =
@@ -147,6 +238,19 @@ void teclado_set_ps2_enabled(int enabled) {
     }
 }
 
+int kbd_ps2_enabled(void) {
+    return ps2_keyboard_enabled;
+}
+
+int kbd_queue_count(void) {
+    if (fila_fim >= fila_inicio) return fila_fim - fila_inicio;
+    return 64 - fila_inicio + fila_fim;
+}
+
+int kbd_history_count(void) {
+    return historico_count;
+}
+
 static void enfileirar(uint8_t sc) {
     int prox = (fila_fim + 1) % 64;
     if (prox == fila_inicio) return;
@@ -219,15 +323,11 @@ static void processar_set1(uint8_t scancode) {
             return;
         }
         if (scancode == 0x48) {
-            if (tem_historico) {
-                while (cursor_buffer > 0) { print("\b"); cursor_buffer--; }
-                for (int i = 0; i < buffer_index; i++) print(" ");
-                for (int i = 0; i < buffer_index; i++) print("\b");
-                strcpy(buffer, historico);
-                buffer_index = strlen(buffer);
-                cursor_buffer = buffer_index;
-                print(buffer);
-            }
+            historico_subir();
+            return;
+        }
+        if (scancode == 0x50) {
+            historico_descer();
             return;
         }
         return;
@@ -236,15 +336,7 @@ static void processar_set1(uint8_t scancode) {
     if (scancode & 0x80) return;
 
     if (scancode == 0x1C) {
-        buffer[buffer_index] = '\0';
-        if (buffer_index > 0) {
-            strcpy(historico, buffer);
-            tem_historico = 1;
-            pcmd(buffer);
-        } else {
-            prompt();
-        }
-        buffer_index = 0; cursor_buffer = 0;
+        executar_buffer();
         return;
     }
 
@@ -272,6 +364,11 @@ static void processar_set1(uint8_t scancode) {
         return;
     }
 
+    if (scancode == 0x0F) {
+        tentar_autocomplete();
+        return;
+    }
+
     char letra = shifton ? keyboard_map_shift[scancode] : keyboard_map[scancode];
     if (letra != 0 && letra != '\b' && letra != '\n') {
         if (buffer_index < 254) {
@@ -291,16 +388,7 @@ static void processar_set1(uint8_t scancode) {
 
 void kbd_ascii_input(char letra) {
     if (letra == '\n') {
-        buffer[buffer_index] = '\0';
-        if (buffer_index > 0) {
-            strcpy(historico, buffer);
-            tem_historico = 1;
-            pcmd(buffer);
-        } else {
-            prompt();
-        }
-        buffer_index = 0;
-        cursor_buffer = 0;
+        executar_buffer();
         return;
     }
 
@@ -316,9 +404,7 @@ void kbd_ascii_input(char letra) {
     }
 
     if (letra == '\t') {
-        for (int j = 0; j < 4; j++) {
-            kbd_ascii_input(' ');
-        }
+        tentar_autocomplete();
         return;
     }
 
@@ -352,6 +438,7 @@ void kbd_scancode_input(uint8_t scancode) {
 
 /* ISR — só lê e enfileira */
 void teclado() {
+    irq_keyboard_count++;
     if (ps2_keyboard_enabled) {
         teclado_drenar_controlador();
     } else {
@@ -373,6 +460,7 @@ void teclado_poll() {
 }
 
 void mouse_handler() {
+    irq_mouse_count++;
     for (int i = 0; i < 8; i++) {
         if (!(inb(KBD_STATUS) & KBD_OUTPUT_FULL)) break;
         (void)inb(KBD_DATA);

@@ -18,5 +18,8 @@ void teclado_set_ps2_enabled(int enabled);
 void mouse_handler();
 void kbd_ascii_input(char letra);
 void kbd_scancode_input(uint8_t scancode);
+int kbd_ps2_enabled(void);
+int kbd_queue_count(void);
+int kbd_history_count(void);
 
 #endif

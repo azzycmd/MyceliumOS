@@ -769,6 +769,8 @@ void vga_panic_screen(char *motivo) {
         print("Motivo: ");
         print(motivo ? motivo : "falha fatal desconhecida");
         print("\n");
+        print("PanicCode="); print_hex(panic_code);
+        print("\n");
         print("EIP="); print_hex(panic_eip);
         print(" CS="); print_hex(panic_cs);
         print(" EFLAGS="); print_hex(panic_eflags);
@@ -830,6 +832,8 @@ void vga_panic_screen(char *motivo) {
     y += 22;
 
     y = panic_line(x, y, "Reason", motivo ? motivo : "unknown fatal failure", BRANCO);
+    y += 14;
+    y = panic_hex_line(x, y, "Code", panic_code, AMARELO);
     y += 14;
     y = panic_line(x, y, "Version", versao, CIANO);
     y += 14;
